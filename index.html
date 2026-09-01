@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Penggunaan Suku Cadang LG</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px; /* Sedikit diperlebar untuk mengakomodasi kolom baru */
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #a50034; /* Warna merah khas LG */
+            text-align: center;
+        }
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .form-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #a50034;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #800028;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f8f8;
+            color: #333;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+            padding: 5px 10px;
+            font-size: 12px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Daftar Penggunaan Suku Cadang</h2>
+    
+    <form id="partForm">
+        <div class="form-group">
+            <input type="date" id="tanggal" required>
+            <!-- Kolom No Laporan ditambahkan di sini -->
+            <input type="text" id="noLaporan" placeholder="No. Laporan (Contoh: RN123456)" required>
+            <input type="text" id="partNumber" placeholder="Part Number (Contoh: AGF78399601)" required>
+            <input type="text" id="namaPart" placeholder="Nama/Deskripsi Part" required>
+            <input type="number" id="jumlah" placeholder="Jumlah (Qty)" min="1" required>
+        </div>
+        <button type="submit">Tambah Suku Cadang</button>
+    </form>
+
+    <table id="partTable">
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>No. Laporan</th> <!-- Header tabel baru -->
+                <th>Part Number</th>
+                <th>Nama Part</th>
+                <th>Qty</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Data akan muncul di sini -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Mengambil data dari Local Storage saat halaman dimuat
+    let partsData = JSON.parse(localStorage.getItem('lgPartsList')) || [];
+
+    const form = document.getElementById('partForm');
+    const tableBody = document.getElementById('tableBody');
+
+    // Fungsi untuk menampilkan data ke dalam tabel
+    function renderTable() {
+        tableBody.innerHTML = '';
+        partsData.forEach((part, index) => {
+            // Fallback jika ada data lama yang belum memiliki No Laporan
+            let noLaporanTampil = part.noLaporan ? part.noLaporan : '-';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${part.tanggal}</td>
+                <td><strong>${noLaporanTampil}</strong></td>
+                <td>${part.partNumber}</td>
+                <td>${part.namaPart}</td>
+                <td>${part.jumlah}</td>
+                <td><button class="btn-delete" onclick="deletePart(${index})">Hapus</button></td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    // Fungsi untuk menambahkan data baru
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const newPart = {
+            tanggal: document.getElementById('tanggal').value,
+            noLaporan: document.getElementById('noLaporan').value.toUpperCase(), // Menyimpan No Laporan
+            partNumber: document.getElementById('partNumber').value.toUpperCase(),
+            namaPart: document.getElementById('namaPart').value,
+            jumlah: document.getElementById('jumlah').value
+        };
+
+        partsData.push(newPart);
+        localStorage.setItem('lgPartsList', JSON.stringify(partsData)); // Simpan otomatis
+        
+        form.reset();
+        renderTable();
+    });
+
+    // Fungsi untuk menghapus data
+    function deletePart(index) {
+        if(confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+            partsData.splice(index, 1);
+            localStorage.setItem('lgPartsList', JSON.stringify(partsData)); // Perbarui penyimpanan
+            renderTable();
+        }
+    }
+
+    // Tampilkan tabel saat pertama kali dibuka
+    renderTable();
+</script>
+
+</body>
+</html>
