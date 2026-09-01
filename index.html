@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LG Spare Part Manager Pro</title>
     
-    <!-- PWA Web App Meta Tags -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#a50034">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LG Parts">
-<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/888/888447.png">
+    <!-- PWA Setup via External Manifest File -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#a50034">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LG Parts">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/888/888447.png">
 
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -323,40 +323,19 @@
 </div>
 
 <script>
-    // System Manifest Injeksi
-    const manifestObj = {
-        "name": "LG Spare Part Manager",
-        "short_name": "LG Parts",
-        "start_url": "./",
-        "display": "standalone",
-        "background_color": "#a50034",
-        "theme_color": "#a50034",
-        "icons": [
-            { "src": "https://cdn-icons-png.flaticon.com/512/888/888447.png", "sizes": "192x192", "type": "image/png" },
-            { "src": "https://cdn-icons-png.flaticon.com/512/888/888447.png", "sizes": "512x512", "type": "image/png" }
-        ]
-    };
-    const manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(manifestBlob);
-    const linkEl = document.createElement('link');
-    linkEl.rel = 'manifest';
-    linkEl.href = manifestURL;
-    document.head.appendChild(linkEl);
-
-    // Register Service Worker
+    // Registrasi Service Worker dari File Terpisah sw.js
     if ('serviceWorker' in navigator) {
-        const swCode = `
-            self.addEventListener('install', e => self.skipWaiting());
-            self.addEventListener('activate', e => self.clients.claim());
-            self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
-        `;
-        const blob = new Blob([swCode], { type: 'text/javascript' });
-        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW terdaftar!', reg))
+                .catch(err => console.log('Gagal daftar SW:', err));
+        });
     }
 
     let partsData = JSON.parse(localStorage.getItem('lgPartsList')) || [];
     let deferredPrompt;
 
+    // Prompt otomatis dari browser jika memenuhi kriteria HTTPS
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
@@ -373,10 +352,10 @@
         document.getElementById('modalBody').innerHTML = `
             <p style="margin-bottom: 10px;">Jika tombol install otomatis tidak merespons, lakukan cara manual ini dari browser HP:</p>
             <ol style="margin-left: 20px; line-height: 1.6;">
-                <li><strong>Chrome / Edge (Android):</strong> Klik titik tiga (⋮) di pojok kanan atas browser ➔ pilih <strong>"Tambahkan ke Layar Utama" / "Install Aplikasi"</strong>.</li>
+                <li><strong>Chrome / Edge (Android):</strong> Klik titik tiga (⋮) di pojok kanan atas ➔ pilih <strong>"Tambahkan ke Layar Utama" / "Install Aplikasi"</strong>.</li>
                 <li><strong>Safari (iPhone/iOS):</strong> Klik tombol <strong>Share (ikon panah ke atas)</strong> ➔ geser ke bawah ➔ pilih <strong>"Tambah ke Layar Utama" (Add to Home Screen)</strong>.</li>
             </ol>
-            <p style="margin-top: 10px; font-size: 0.82rem; color: #666;">*Pastikan file HTML ini diakses melalui jaringan HTTPS (seperti GitHub Pages / Vercel) agar fitur PWA aktif sempurna.</p>
+            <p style="margin-top: 10px; font-size: 0.82rem; color: #666;">*Catatan: PWA butuh diakses via HTTPS (seperti GitHub Pages / Vercel) agar bisa di-install langsung.</p>
         `;
         document.getElementById('modalFooter').innerHTML = `
             <button class="btn btn-primary" onclick="closeModal()">Mengerti</button>
@@ -554,6 +533,7 @@
 
         const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
 
+        // Auto width kolom
         const colWidths = excelRows[2].map((col, i) => {
             let maxLen = col.toString().length;
             for (let r = 2; r < excelRows.length; r++) {
