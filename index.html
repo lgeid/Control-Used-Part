@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LG Spare Part Manager Pro</title>
     
-    <!-- PWA Setup & Manifest -->
-    <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#a50034">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LG Parts">
+    <!-- PWA Web App Meta Tags -->
+    <meta name="theme-color" content="#a50034">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LG Parts">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/888/888447.png">
 
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -73,7 +74,7 @@
         }
 
         .btn-install {
-            display: none;
+            display: inline-flex;
             background: var(--lg-red);
             color: #fff;
             border: none;
@@ -255,7 +256,7 @@
 <div class="container">
     <div class="header-bar">
         <h2><i class="fa-solid fa-gears"></i> Manajemen Spare Part LG</h2>
-        <button id="installBtn" class="btn-install"><i class="fa-solid fa-mobile-screen-button"></i> Install Aplikasi</button>
+        <button id="installBtn" class="btn-install" onclick="manualInstallGuide()"><i class="fa-solid fa-mobile-screen-button"></i> Cara Install App</button>
     </div>
 
     <!-- Form Input Data -->
@@ -311,7 +312,7 @@
     </div>
 </div>
 
-<!-- Modal Custom Confirm / Edit -->
+<!-- Modal Custom Confirm / Edit / Guide -->
 <div id="customModal" class="modal">
     <div class="modal-content">
         <h3 id="modalTitle" style="margin-bottom: 15px;">Konfirmasi</h3>
@@ -321,12 +322,32 @@
 </div>
 
 <script>
-    // Registrasi Service Worker Otomatis untuk PWA
+    // System Manifest Injeksi
+    const manifestObj = {
+        "name": "LG Spare Part Manager",
+        "short_name": "LG Parts",
+        "start_url": "./",
+        "display": "standalone",
+        "background_color": "#a50034",
+        "theme_color": "#a50034",
+        "icons": [
+            { "src": "https://cdn-icons-png.flaticon.com/512/888/888447.png", "sizes": "192x192", "type": "image/png" },
+            { "src": "https://cdn-icons-png.flaticon.com/512/888/888447.png", "sizes": "512x512", "type": "image/png" }
+        ]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(manifestBlob);
+    const linkEl = document.createElement('link');
+    linkEl.rel = 'manifest';
+    linkEl.href = manifestURL;
+    document.head.appendChild(linkEl);
+
+    // Register Service Worker
     if ('serviceWorker' in navigator) {
         const swCode = `
-            self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
-            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-            self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
+            self.addEventListener('install', e => self.skipWaiting());
+            self.addEventListener('activate', e => self.clients.claim());
+            self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
         `;
         const blob = new Blob([swCode], { type: 'text/javascript' });
         navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
@@ -335,22 +356,32 @@
     let partsData = JSON.parse(localStorage.getItem('lgPartsList')) || [];
     let deferredPrompt;
 
-    // Prompt PWA Install
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        document.getElementById('installBtn').style.display = 'block';
+        const btn = document.getElementById('installBtn');
+        btn.innerHTML = `<i class="fa-solid fa-download"></i> Install App`;
+        btn.onclick = () => {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+        };
     });
 
-    document.getElementById('installBtn').addEventListener('click', () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then(() => {
-                deferredPrompt = null;
-                document.getElementById('installBtn').style.display = 'none';
-            });
-        }
-    });
+    function manualInstallGuide() {
+        document.getElementById('modalTitle').innerText = "Panduan Install Aplikasi";
+        document.getElementById('modalBody').innerHTML = `
+            <p style="margin-bottom: 10px;">Jika tombol install otomatis tidak merespons, lakukan cara manual ini dari browser HP:</p>
+            <ol style="margin-left: 20px; line-height: 1.6;">
+                <li><strong>Chrome / Edge (Android):</strong> Klik titik tiga (⋮) di pojok kanan atas browser ➔ pilih <strong>"Tambahkan ke Layar Utama" / "Install Aplikasi"</strong>.</li>
+                <li><strong>Safari (iPhone/iOS):</strong> Klik tombol <strong>Share (ikon panah ke atas)</strong> ➔ geser ke bawah ➔ pilih <strong>"Tambah ke Layar Utama" (Add to Home Screen)</strong>.</li>
+            </ol>
+            <p style="margin-top: 10px; font-size: 0.82rem; color: #666;">*Pastikan file HTML ini diakses melalui jaringan HTTPS (seperti GitHub Pages / Vercel) agar fitur PWA aktif sempurna.</p>
+        `;
+        document.getElementById('modalFooter').innerHTML = `
+            <button class="btn btn-primary" onclick="closeModal()">Mengerti</button>
+        `;
+        document.getElementById('customModal').style.display = 'flex';
+    }
 
     function showToast(message) {
         const toast = document.getElementById("toast");
@@ -491,28 +522,23 @@
         window.open(`https://api.whatsapp.com/send?text=${pesan}`, '_blank');
     }
 
-    // Export Excel Rapi + Auto Width + Judul Otomatis + ZIP
     function exportToExcelZip() {
         if (partsData.length === 0) return alert("Tidak ada data untuk diekspor!");
 
-        // 1. Hitung Rentang Tanggal Bulan Berjalan (Awal - Akhir Bulan)
         const now = new Date();
         const namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
         const bulanAktif = namaBulan[now.getMonth()];
         const tahunAktif = now.getFullYear();
         
-        // Tanggal terakhir bulan berjalan
         const lastDay = new Date(tahunAktif, now.getMonth() + 1, 0).getDate();
         const judulLaporan = `PENGGUNAAN USED PART LG (1 ${bulanAktif} ${tahunAktif} – ${lastDay} ${bulanAktif} ${tahunAktif})`;
 
-        // 2. Susun Struktur Array Data Excel (Judul, Baris Kosong, Header Tabel, Isi)
         const excelRows = [
-            [judulLaporan.toUpperCase()], // Row 1: Judul
-            [],                            // Row 2: Kosong
-            ["Tanggal", "Nama Teknisi", "No. Laporan", "Part Number", "Nama Part", "Jumlah (Qty)", "Keterangan Kerusakan"] // Row 3: Header
+            [judulLaporan.toUpperCase()],
+            [],
+            ["Tanggal", "Nama Teknisi", "No. Laporan", "Part Number", "Nama Part", "Jumlah (Qty)", "Keterangan Kerusakan"]
         ];
 
-        // Masukkan data transaksi
         partsData.forEach(item => {
             excelRows.push([
                 item.tanggal || '-',
@@ -525,21 +551,18 @@
             ]);
         });
 
-        // 3. Buat Sheet dari Array
         const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
 
-        // 4. Hitung dan Atur Lebar Kolom (Auto Width agar tidak terpotong/rapat)
         const colWidths = excelRows[2].map((col, i) => {
             let maxLen = col.toString().length;
             for (let r = 2; r < excelRows.length; r++) {
                 const cellValue = excelRows[r][i] ? excelRows[r][i].toString() : '';
                 if (cellValue.length > maxLen) maxLen = cellValue.length;
             }
-            return { wch: Math.max(maxLen + 4, 12) }; // Tambah margin aman minimum 12
+            return { wch: Math.max(maxLen + 4, 12) };
         });
         worksheet['!cols'] = colWidths;
 
-        // 5. Buat Workbook & Kompresi ke File ZIP
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Used Parts LG");
 
