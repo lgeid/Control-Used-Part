@@ -1,0 +1,23 @@
+{
+  "name": "Manajemen Spare Part LG",
+  "short_name": "SparePart LG",
+  "start_url": "/Control-Used-Part/",
+  "scope": "/Control-Used-Part/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0052cc",
+  "description": "Aplikasi Manajemen Spare Part LG",
+  "icons": [
+    {
+      "src": "/Control-Used-Part/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/Control-Used-Part/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
