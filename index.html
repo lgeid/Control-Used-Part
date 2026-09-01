@@ -3,171 +3,533 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Penggunaan Suku Cadang LG</title>
+    <title>LG Spare Part Manager Pro</title>
+    
+    <!-- PWA Setup & Manifest -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkxHIFNwYXJlIFBhcnQgTWFuYWdlciIsCiAgInNob3J0X25hbWUiIjogIkxHIFBhcnRzIiwKICAic3RhcnRfdXJsIjogIi4vIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjYTUwMDM0IiwKICAidGhlbWVfY29sb3IiIjogIiNhNTAwMzQiLAogICJpY29ucyI6IFt7CiAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzg4OC84ODg4NDcucG5nIiwKICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICJ0eXBlIjogImltYWdlL3BuZyIKICB9XQp9">
+    <meta name="theme-color" content="#a50034">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LG Parts">
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+        :root {
+            --lg-red: #a50034;
+            --lg-red-dark: #800028;
+            --bg-overlay: rgba(15, 23, 42, 0.78);
+            --card-bg: rgba(255, 255, 255, 0.93);
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
+        body {
+            background: linear-gradient(var(--bg-overlay), var(--bg-overlay)), 
+                        url('https://files.catbox.moe/07qfx0.jpeg') no-repeat center center fixed;
+            background-size: cover;
+            color: #333;
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+
         .container {
-            max-width: 900px; /* Sedikit diperlebar untuk mengakomodasi kolom baru */
+            max-width: 1280px;
             margin: 0 auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        h2 {
-            color: #a50034; /* Warna merah khas LG */
-            text-align: center;
-        }
-        .form-group {
+
+        .header-bar {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--lg-red);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
             flex-wrap: wrap;
+            gap: 10px;
         }
-        .form-group input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            min-width: 150px;
+
+        .header-bar h2 {
+            color: var(--lg-red);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        button {
-            padding: 10px 20px;
-            background-color: #a50034;
-            color: white;
+
+        .btn-install {
+            display: none;
+            background: var(--lg-red);
+            color: #fff;
             border: none;
-            border-radius: 4px;
+            padding: 10px 18px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
+            box-shadow: 0 4px 10px rgba(165, 0, 52, 0.3);
+            animation: pulse 2s infinite;
         }
-        button:hover {
-            background-color: #800028;
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
         }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--lg-red);
+            box-shadow: 0 0 0 3px rgba(165, 0, 52, 0.15);
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background-color: var(--lg-red); color: white; }
+        .btn-primary:hover { background-color: var(--lg-red-dark); }
+        .btn-excel { background-color: #1d6f42; color: white; }
+        .btn-pdf { background-color: #d32f2f; color: white; }
+        .btn-wa { background-color: #25D366; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+
+        .action-toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .filter-card {
+            background: rgba(240, 240, 240, 0.85);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .filter-card h4 {
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            background: white;
+            font-size: 0.88rem;
         }
+
         th, td {
-            padding: 12px;
-            border: 1px solid #ddd;
+            padding: 10px 12px;
             text-align: left;
+            border-bottom: 1px solid #ddd;
         }
+
         th {
-            background-color: #f8f8f8;
+            background-color: #f8f9fa;
             color: #333;
+            font-weight: 700;
         }
-        .btn-delete {
-            background-color: #dc3545;
-            padding: 5px 10px;
-            font-size: 12px;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+
+        tr:hover { background-color: #f1f1f1; }
+
+        .action-btns {
+            display: flex;
+            gap: 5px;
         }
-        .btn-delete:hover {
-            background-color: #c82333;
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+        }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #2e7d32;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 12px 20px;
+            position: fixed;
+            z-index: 1000;
+            right: 20px;
+            top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-footer {
+            margin-top: 15px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        @keyframes fadein { from {top: 0; opacity: 0;} to {top: 20px; opacity: 1;} }
+        @keyframes fadeout { from {top: 20px; opacity: 1;} to {top: 0; opacity: 0;} }
+
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .action-toolbar { flex-direction: column; }
+            .btn { width: 100%; }
         }
     </style>
 </head>
 <body>
 
+<div id="toast"><i class="fa-solid fa-circle-check"></i> <span id="toastMsg">Transaksi Berhasil!</span></div>
+
 <div class="container">
-    <h2>Daftar Penggunaan Suku Cadang</h2>
-    
+    <div class="header-bar">
+        <h2><i class="fa-solid fa-gears"></i> Manajemen Spare Part LG</h2>
+        <button id="installBtn" class="btn-install"><i class="fa-solid fa-mobile-screen-button"></i> Install Aplikasi</button>
+    </div>
+
+    <!-- Form Input Data -->
     <form id="partForm">
-        <div class="form-group">
+        <div class="form-grid">
             <input type="date" id="tanggal" required>
-            <!-- Kolom No Laporan ditambahkan di sini -->
-            <input type="text" id="noLaporan" placeholder="No. Laporan (Contoh: RN123456)" required>
-            <input type="text" id="partNumber" placeholder="Part Number (Contoh: AGF78399601)" required>
+            <input type="text" id="namaTeknisi" placeholder="Nama Teknisi" required>
+            <input type="text" id="noLaporan" placeholder="No. Laporan (RN123456)" required>
+            <input type="text" id="partNumber" placeholder="Part Number (AGF78399601)" required>
             <input type="text" id="namaPart" placeholder="Nama/Deskripsi Part" required>
             <input type="number" id="jumlah" placeholder="Jumlah (Qty)" min="1" required>
+            <input type="text" id="kerusakan" placeholder="Keterangan Kerusakan" required>
         </div>
-        <button type="submit">Tambah Suku Cadang</button>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 20px;">
+            <i class="fa-solid fa-plus"></i> Tambah Transaksi
+        </button>
     </form>
 
-    <table id="partTable">
-        <thead>
-            <tr>
-                <th>Tanggal</th>
-                <th>No. Laporan</th> <!-- Header tabel baru -->
-                <th>Part Number</th>
-                <th>Nama Part</th>
-                <th>Qty</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody">
-            <!-- Data akan muncul di sini -->
-        </tbody>
-    </table>
+    <!-- Filter Section -->
+    <div class="filter-card">
+        <h4><i class="fa-solid fa-filter"></i> Filter & Pencarian</h4>
+        <div class="form-grid">
+            <input type="date" id="filterTanggal" oninput="renderTable()">
+            <input type="text" id="filterTeknisi" placeholder="Cari Nama Teknisi..." oninput="renderTable()">
+            <input type="text" id="filterNoLaporan" placeholder="Cari No. Laporan..." oninput="renderTable()">
+            <input type="text" id="filterPartNumber" placeholder="Cari Part Number..." oninput="renderTable()">
+        </div>
+    </div>
+
+    <!-- Toolbar Ekspor/Aksi -->
+    <div class="action-toolbar">
+        <button class="btn btn-excel" onclick="exportToExcelZip()"><i class="fa-solid fa-file-zipper"></i> Export Excel (ZIP)</button>
+        <button class="btn btn-pdf" onclick="cetakPDF()"><i class="fa-solid fa-file-pdf"></i> Cetak Laporan (PDF)</button>
+    </div>
+
+    <!-- Tabel Data -->
+    <div class="table-responsive" id="printArea">
+        <table id="partTable">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Teknisi</th>
+                    <th>No. Laporan</th>
+                    <th>Part Number</th>
+                    <th>Nama Part</th>
+                    <th>Qty</th>
+                    <th>Kerusakan</th>
+                    <th class="no-print">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Custom Confirm / Edit -->
+<div id="customModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle" style="margin-bottom: 15px;">Konfirmasi</h3>
+        <div id="modalBody"></div>
+        <div class="modal-footer" id="modalFooter"></div>
+    </div>
 </div>
 
 <script>
-    // Mengambil data dari Local Storage saat halaman dimuat
+    // Registrasi Service Worker Otomatis untuk PWA
+    if ('serviceWorker' in navigator) {
+        const swCode = `
+            self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+            self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
+        `;
+        const blob = new Blob([swCode], { type: 'text/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    }
+
     let partsData = JSON.parse(localStorage.getItem('lgPartsList')) || [];
+    let deferredPrompt;
 
-    const form = document.getElementById('partForm');
-    const tableBody = document.getElementById('tableBody');
+    // Prompt PWA Install
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBtn').style.display = 'block';
+    });
 
-    // Fungsi untuk menampilkan data ke dalam tabel
+    document.getElementById('installBtn').addEventListener('click', () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => {
+                deferredPrompt = null;
+                document.getElementById('installBtn').style.display = 'none';
+            });
+        }
+    });
+
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        document.getElementById("toastMsg").innerText = message;
+        toast.className = "show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
     function renderTable() {
+        const tableBody = document.getElementById('tableBody');
         tableBody.innerHTML = '';
-        partsData.forEach((part, index) => {
-            // Fallback jika ada data lama yang belum memiliki No Laporan
-            let noLaporanTampil = part.noLaporan ? part.noLaporan : '-';
-            
+
+        const fTanggal = document.getElementById('filterTanggal').value;
+        const fTeknisi = document.getElementById('filterTeknisi').value.toLowerCase();
+        const fNoLap = document.getElementById('filterNoLaporan').value.toLowerCase();
+        const fPartNum = document.getElementById('filterPartNumber').value.toLowerCase();
+
+        const filtered = partsData.filter(p => {
+            const matchTanggal = fTanggal ? p.tanggal === fTanggal : true;
+            const matchTeknisi = p.namaTeknisi ? p.namaTeknisi.toLowerCase().includes(fTeknisi) : true;
+            const matchNoLap = p.noLaporan ? p.noLaporan.toLowerCase().includes(fNoLap) : true;
+            const matchPartNum = p.partNumber ? p.partNumber.toLowerCase().includes(fPartNum) : true;
+            return matchTanggal && matchTeknisi && matchNoLap && matchPartNum;
+        });
+
+        filtered.forEach((part) => {
+            const originalIndex = partsData.indexOf(part);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${part.tanggal}</td>
-                <td><strong>${noLaporanTampil}</strong></td>
+                <td><strong>${part.namaTeknisi || '-'}</strong></td>
+                <td>${part.noLaporan || '-'}</td>
                 <td>${part.partNumber}</td>
                 <td>${part.namaPart}</td>
                 <td>${part.jumlah}</td>
-                <td><button class="btn-delete" onclick="deletePart(${index})">Hapus</button></td>
+                <td>${part.kerusakan || '-'}</td>
+                <td class="no-print action-btns">
+                    <button class="btn btn-wa btn-sm" onclick="kirimWA(${originalIndex})"><i class="fa-brands fa-whatsapp"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="openEditModal(${originalIndex})"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn btn-pdf btn-sm" onclick="confirmDelete(${originalIndex})"><i class="fa-solid fa-trash"></i></button>
+                </td>
             `;
             tableBody.appendChild(row);
         });
     }
 
-    // Fungsi untuk menambahkan data baru
-    form.addEventListener('submit', function(e) {
+    document.getElementById('partForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        
         const newPart = {
             tanggal: document.getElementById('tanggal').value,
-            noLaporan: document.getElementById('noLaporan').value.toUpperCase(), // Menyimpan No Laporan
+            namaTeknisi: document.getElementById('namaTeknisi').value,
+            noLaporan: document.getElementById('noLaporan').value.toUpperCase(),
             partNumber: document.getElementById('partNumber').value.toUpperCase(),
             namaPart: document.getElementById('namaPart').value,
-            jumlah: document.getElementById('jumlah').value
+            jumlah: document.getElementById('jumlah').value,
+            kerusakan: document.getElementById('kerusakan').value
         };
 
         partsData.push(newPart);
-        localStorage.setItem('lgPartsList', JSON.stringify(partsData)); // Simpan otomatis
-        
-        form.reset();
-        renderTable();
+        saveAndRefresh();
+        this.reset();
+        showToast("Transaksi berhasil ditambahkan!");
     });
 
-    // Fungsi untuk menghapus data
-    function deletePart(index) {
-        if(confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-            partsData.splice(index, 1);
-            localStorage.setItem('lgPartsList', JSON.stringify(partsData)); // Perbarui penyimpanan
-            renderTable();
-        }
+    function saveAndRefresh() {
+        localStorage.setItem('lgPartsList', JSON.stringify(partsData));
+        renderTable();
     }
 
-    // Tampilkan tabel saat pertama kali dibuka
+    const modal = document.getElementById('customModal');
+    function closeModal() { modal.style.display = 'none'; }
+
+    function confirmDelete(index) {
+        document.getElementById('modalTitle').innerText = "Konfirmasi Hapus";
+        document.getElementById('modalBody').innerText = "Apakah Anda yakin ingin menghapus data laporan ini?";
+        document.getElementById('modalFooter').innerHTML = `
+            <button class="btn btn-secondary" onclick="closeModal()">Batal</button>
+            <button class="btn btn-pdf" onclick="deletePart(${index})">Hapus</button>
+        `;
+        modal.style.display = 'flex';
+    }
+
+    function deletePart(index) {
+        partsData.splice(index, 1);
+        saveAndRefresh();
+        closeModal();
+        showToast("Data berhasil dihapus!");
+    }
+
+    function openEditModal(index) {
+        const item = partsData[index];
+        document.getElementById('modalTitle').innerText = "Edit Data Spare Part";
+        document.getElementById('modalBody').innerHTML = `
+            <div class="form-grid" style="grid-template-columns: 1fr;">
+                <input type="date" id="editTanggal" value="${item.tanggal}">
+                <input type="text" id="editNamaTeknisi" value="${item.namaTeknisi || ''}" placeholder="Nama Teknisi">
+                <input type="text" id="editNoLaporan" value="${item.noLaporan}">
+                <input type="text" id="editPartNumber" value="${item.partNumber}">
+                <input type="text" id="editNamaPart" value="${item.namaPart}">
+                <input type="number" id="editJumlah" value="${item.jumlah}">
+                <input type="text" id="editKerusakan" value="${item.kerusakan}">
+            </div>
+        `;
+        document.getElementById('modalFooter').innerHTML = `
+            <button class="btn btn-secondary" onclick="closeModal()">Batal</button>
+            <button class="btn btn-primary" onclick="saveEdit(${index})">Simpan Perubahan</button>
+        `;
+        modal.style.display = 'flex';
+    }
+
+    function saveEdit(index) {
+        partsData[index] = {
+            tanggal: document.getElementById('editTanggal').value,
+            namaTeknisi: document.getElementById('editNamaTeknisi').value,
+            noLaporan: document.getElementById('editNoLaporan').value.toUpperCase(),
+            partNumber: document.getElementById('editPartNumber').value.toUpperCase(),
+            namaPart: document.getElementById('editNamaPart').value,
+            jumlah: document.getElementById('editJumlah').value,
+            kerusakan: document.getElementById('editKerusakan').value
+        };
+        saveAndRefresh();
+        closeModal();
+        showToast("Data berhasil diperbarui!");
+    }
+
+    function kirimWA(index) {
+        const item = partsData[index];
+        const pesan = `*LAPORAN PENGGUNAAN SPARE PART LG*%0A%0A` +
+                      `*Tanggal:* ${item.tanggal}%0A` +
+                      `*Teknisi:* ${item.namaTeknisi || '-'}%0A` +
+                      `*No. Laporan:* ${item.noLaporan}%0A` +
+                      `*Part Number:* ${item.partNumber}%0A` +
+                      `*Nama Part:* ${item.namaPart}%0A` +
+                      `*Jumlah (Qty):* ${item.jumlah}%0A` +
+                      `*Keterangan Kerusakan:* ${item.kerusakan}%0A%0A` +
+                      `_Pesan dikirim otomatis dari Aplikasi LG Manager_`;
+        
+        window.open(`https://api.whatsapp.com/send?text=${pesan}`, '_blank');
+    }
+
+    function exportToExcelZip() {
+        if(partsData.length === 0) return alert("Tidak ada data untuk diekspor!");
+        
+        const worksheet = XLSX.utils.json_to_sheet(partsData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "SpareParts");
+        
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        
+        const zip = new JSZip();
+        zip.file("Laporan_Penggunaan_Sparepart_LG.xlsx", excelBuffer);
+        
+        zip.generateAsync({ type: "blob" }).then(function(content) {
+            saveAs(content, "Laporan_LG_Sparepart.zip");
+            showToast("Berhasil mendownload Excel (ZIP)!");
+        });
+    }
+
+    function cetakPDF() {
+        const element = document.getElementById('printArea');
+        const hideElements = document.querySelectorAll('.no-print');
+        
+        hideElements.forEach(el => el.style.display = 'none');
+
+        const opt = {
+            margin:       0.5,
+            filename:     'Laporan_Sparepart_LG.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            hideElements.forEach(el => el.style.display = '');
+            showToast("Berhasil mencetak PDF!");
+        });
+    }
+
     renderTable();
 </script>
-
 </body>
 </html>
