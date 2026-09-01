@@ -491,20 +491,65 @@
         window.open(`https://api.whatsapp.com/send?text=${pesan}`, '_blank');
     }
 
+    // Export Excel Rapi + Auto Width + Judul Otomatis + ZIP
     function exportToExcelZip() {
-        if(partsData.length === 0) return alert("Tidak ada data untuk diekspor!");
+        if (partsData.length === 0) return alert("Tidak ada data untuk diekspor!");
+
+        // 1. Hitung Rentang Tanggal Bulan Berjalan (Awal - Akhir Bulan)
+        const now = new Date();
+        const namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        const bulanAktif = namaBulan[now.getMonth()];
+        const tahunAktif = now.getFullYear();
         
-        const worksheet = XLSX.utils.json_to_sheet(partsData);
+        // Tanggal terakhir bulan berjalan
+        const lastDay = new Date(tahunAktif, now.getMonth() + 1, 0).getDate();
+        const judulLaporan = `PENGGUNAAN USED PART LG (1 ${bulanAktif} ${tahunAktif} – ${lastDay} ${bulanAktif} ${tahunAktif})`;
+
+        // 2. Susun Struktur Array Data Excel (Judul, Baris Kosong, Header Tabel, Isi)
+        const excelRows = [
+            [judulLaporan.toUpperCase()], // Row 1: Judul
+            [],                            // Row 2: Kosong
+            ["Tanggal", "Nama Teknisi", "No. Laporan", "Part Number", "Nama Part", "Jumlah (Qty)", "Keterangan Kerusakan"] // Row 3: Header
+        ];
+
+        // Masukkan data transaksi
+        partsData.forEach(item => {
+            excelRows.push([
+                item.tanggal || '-',
+                item.namaTeknisi || '-',
+                item.noLaporan || '-',
+                item.partNumber || '-',
+                item.namaPart || '-',
+                Number(item.jumlah) || 0,
+                item.kerusakan || '-'
+            ]);
+        });
+
+        // 3. Buat Sheet dari Array
+        const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
+
+        // 4. Hitung dan Atur Lebar Kolom (Auto Width agar tidak terpotong/rapat)
+        const colWidths = excelRows[2].map((col, i) => {
+            let maxLen = col.toString().length;
+            for (let r = 2; r < excelRows.length; r++) {
+                const cellValue = excelRows[r][i] ? excelRows[r][i].toString() : '';
+                if (cellValue.length > maxLen) maxLen = cellValue.length;
+            }
+            return { wch: Math.max(maxLen + 4, 12) }; // Tambah margin aman minimum 12
+        });
+        worksheet['!cols'] = colWidths;
+
+        // 5. Buat Workbook & Kompresi ke File ZIP
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "SpareParts");
-        
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Used Parts LG");
+
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
         
         const zip = new JSZip();
-        zip.file("Laporan_Penggunaan_Sparepart_LG.xlsx", excelBuffer);
+        zip.file(`Laporan_Used_Part_LG_${bulanAktif}_${tahunAktif}.xlsx`, excelBuffer);
         
         zip.generateAsync({ type: "blob" }).then(function(content) {
-            saveAs(content, "Laporan_LG_Sparepart.zip");
+            saveAs(content, `Laporan_Used_Part_LG_${bulanAktif}_${tahunAktif}.zip`);
             showToast("Berhasil mendownload Excel (ZIP)!");
         });
     }
